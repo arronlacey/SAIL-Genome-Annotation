@@ -3,7 +3,7 @@ params.output_folder = "."
 params.table_extension = "vcf"
 params.cpu = 1
 params.annovar_db = "humandb/"
-params.mem    = 4
+params.mem = 4
 params.buildver = "hg19"
 params.annovar_params = "-protocol refGene,dbnsfp35a,clinvar_20180603,gnomad211_genome -operation gx,f,f,f -vcfinput -nastring ."
 
@@ -32,8 +32,7 @@ if (params.help) {
 
 log.info "table_folder=${params.table_folder}"
 
-tables = Channel.fromPath( params.table_folder+'/*.'+params.table_extension)
-                 .ifEmpty { error "empty table folder, please verify your input." }
+tables = Channel.fromPath( params.table_folder).ifEmpty { error "empty table folder, please verify your input." }
 
 annodb = file( params.annovar_db )
 
@@ -49,20 +48,14 @@ process annovar {
   output:
   file "*multianno*.txt" into output_annovar_txt
   file "*multianno*.vcf" optional true into output_annovar_vcf
-  file "*.fa" optional true into coding_changes_fasta
 
   publishDir params.output_folder, mode: 'copy', pattern: '{*.txt}' 
   publishDir "${params.output_folder}/coding_changes", mode: 'copy', pattern: '{*.fa}'
 
   shell:
-  if(params.table_extension=="vcf"|params.table_extension=="vcf.gz"){
-	vcf="--vcfinput -nastring ."
-  }else{
-	 vcf="-nastring NA "
-  }
   file_name = table.baseName
   '''
-  table_annovar.pl -buildver !{params.buildver} --thread !{params.cpu} --onetranscript !{vcf} !{params.annovar_params} !{table} !{annodb} -out !{file_name}
+  perl /home/arron/annovar-nextflow/table_annovar.pl !{params.table_folder} !{annodb} -buildver !{params.buildver} -out !{file_name} !{params.annovar_params}
   '''
 }
 
