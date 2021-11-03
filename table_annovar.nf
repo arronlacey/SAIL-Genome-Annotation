@@ -32,7 +32,8 @@ if (params.help) {
 
 log.info "table_folder=${params.table_folder}"
 
-tables = Channel.fromPath( params.table_folder).ifEmpty { error "empty table folder, please verify your input." }
+tables = Channel.fromPath( params.table_folder ).ifEmpty{ error "empty table folder, please verify your input." }
+tables2 = Channel.fromPath( params.table_folder ).ifEmpty{ error "empty table folder, please verify your input." }
 
 annodb = file( params.annovar_db )
 
@@ -59,21 +60,15 @@ process annovar {
   '''
 }
 
-process CompressAndIndex {
-    tag { vcf_name }
+process AddFileNameAsColumn {  
+  input:
+  file table2 from tables2
+  file outfile from output_annovar_txt
 
-    input:
-    file(vcf) from output_annovar_vcf
-
-    output:
-    set file("*.vcf.gz"), file("*.vcf.gz.tbi") into output_annovar_vcfgztbi
-
-    publishDir params.output_folder, mode: 'copy'
-
-    shell:
-    vcf_name = vcf.baseName
-    '''
-    bcftools view -O z !{vcf} > !{vcf_name}.vcf.gz
-    bcftools index -t !{vcf_name}.vcf.gz
-    '''
+  shell:
+  file_name = table2.baseName
+  file_name2 = outfile
+  '''
+  awk -i inplace '{print $0,"\t"(NR>1?FILENAME:"File")}' !{file_name}.!{file_name2}
+  '''
 }
